@@ -1,26 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { useParams, useHistory } from "react-router";
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Button } from 'react-bootstrap';
+import { useParams, useHistory } from 'react-router';
 
-import NavbarAdmin from "../components/NavbarAdmin";
+import NavbarAdmin from '../components/NavbarAdmin';
 
-import dataCategory from "../fakeData/category";
+import dataCategory from '../fakeData/category';
 
 // Import useQuery and useMutation here ...
+import { useQuery, useMutation } from 'react-query';
 
 // Get API config here ...
+import { API } from '../config/api';
 
 export default function UpdateCategoryAdmin() {
-  const title = "Category admin";
-  document.title = "DumbMerch | " + title;
+  const title = 'Category admin';
+  document.title = 'DumbMerch | ' + title;
 
   let history = useHistory();
   let api = API();
   const { id } = useParams();
 
   // Create variabel for store data with useState here ...
+  const [category, setCategory] = useState({ name: '' });
 
   // Create process for handle fetching category data by id from database with useQuery here ...
+  // Fetching category data by id from database
+  let { refetch } = useQuery('categoryCache', async () => {
+    const response = await api.get('/category/' + id);
+    setCategory({ name: response.data.name });
+  });
 
   const handleChange = (e) => {
     setCategory({
@@ -30,6 +38,30 @@ export default function UpdateCategoryAdmin() {
   };
 
   // Create function for handle insert new product data with useMutation here ...
+  const handleSubmit = useMutation(async (e) => {
+    try {
+      e.preventDefault();
+
+      // Data body
+      const body = JSON.stringify(category);
+
+      // Configuration
+      const config = {
+        method: 'PATCH',
+        headers: {
+          'Content-type': 'application/json',
+        },
+        body,
+      };
+
+      // Insert category data
+      const response = await api.patch('/category/' + id, config);
+
+      history.push('/category-admin');
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
   return (
     <>

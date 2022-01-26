@@ -1,19 +1,21 @@
-import React, { useState, useEffect, createElement } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { useParams, useHistory } from "react-router";
+import React, { useState, useEffect, createElement } from 'react';
+import { Container, Row, Col, Button } from 'react-bootstrap';
+import { useParams, useHistory } from 'react-router';
 
-import NavbarAdmin from "../components/NavbarAdmin";
-import CheckBox from "../components/form/CheckBox";
+import NavbarAdmin from '../components/NavbarAdmin';
+import CheckBox from '../components/form/CheckBox';
 
-import dataProduct from "../fakeData/product";
+import dataProduct from '../fakeData/product';
 
 // Import useQuery and useMutation here ...
+import { useQuery, useMutation } from 'react-query';
 
 // Get API config here ...
+import { API } from '../config/api';
 
 export default function UpdateProductAdmin() {
-  const title = "Product admin";
-  document.title = "DumbMerch | " + title;
+  const title = 'Product admin';
+  document.title = 'DumbMerch | ' + title;
 
   let history = useHistory();
   let api = API();
@@ -25,15 +27,106 @@ export default function UpdateProductAdmin() {
   const [product, setProduct] = useState({}); //Store product data
 
   // Create variabel for store data with useState here ...
+  const [form, setForm] = useState({
+    image: '',
+    name: '',
+    desc: '',
+    price: '',
+    qty: '',
+  });
 
   // Create process for handle fetching detail product data by id from database with useQuery here ...
   // Create process for handle fetching category data from database with useQuery here ...
+  // Fetching detail product data by id from database
+  let { productRefetch } = useQuery('productCache', async () => {
+    const config = {
+      headers: {
+        Authorization: 'Basic ' + localStorage.token,
+      },
+    };
+    const response = await api.get('/product/' + id, config);
+    setForm({
+      name: response.data.name,
+      desc: response.data.desc,
+      price: response.data.price,
+      qty: response.data.qty,
+      image: response.data.image,
+    });
+    setProduct(response.data);
+  });
+
+  // Fetching category data
+  let { categoriesRefetch } = useQuery('categoriesCache', async () => {
+    const response = await api.get('/categories');
+    setCategories(response.data);
+  });
 
   // Create function for handle if category selected here ...
+  // For handle if category selected
+  const handleChangeCategoryId = (e) => {
+    const id = e.target.value;
+    const checked = e.target.checked;
+
+    if (checked == true) {
+      // Save category id if checked
+      setCategoryId([...categoryId, parseInt(id)]);
+    } else {
+      // Delete category id from variable if unchecked
+      let newCategoryId = categoryId.filter((categoryIdItem) => {
+        return categoryIdItem != id;
+      });
+      setCategoryId(newCategoryId);
+    }
+  };
 
   // Create function for handle change data on form variabel here ...
+  // Handle change data on form
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]:
+        e.target.type === 'file' ? e.target.files : e.target.value,
+    });
+
+    // Create image url for preview
+    if (e.target.type === 'file') {
+      setPreview(e.target.files);
+    }
+  };
 
   // Create function for handle insert new product data with useMutation here ...
+  const handleSubmit = useMutation(async (e) => {
+    try {
+      e.preventDefault();
+
+      // Store data with FormData as object
+      const formData = new FormData();
+      if (preview) {
+        formData.set('image', preview[0], preview[0]?.name);
+      }
+      formData.set('name', form.name);
+      formData.set('desc', form.desc);
+      formData.set('price', form.price);
+      formData.set('qty', form.qty);
+      formData.set('categoryId', categoryId);
+
+      // Configuration
+      const config = {
+        method: 'PATCH',
+        headers: {
+          Authorization: 'Basic ' + localStorage.token,
+        },
+        body: formData,
+      };
+
+      // Insert product data
+      const response = await api.patch('/product/' + product.id, config);
+
+      history.push('/product-admin');
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
   useEffect(() => {
     const newCategoryId = product?.categories?.map((item) => {
@@ -58,9 +151,9 @@ export default function UpdateProductAdmin() {
                   <img
                     src={form.image}
                     style={{
-                      maxWidth: "150px",
-                      maxHeight: "150px",
-                      objectFit: "cover",
+                      maxWidth: '150px',
+                      maxHeight: '150px',
+                      objectFit: 'cover',
                     }}
                     alt="product"
                   />
@@ -70,15 +163,21 @@ export default function UpdateProductAdmin() {
                   <img
                     src={URL.createObjectURL(preview[0])}
                     style={{
-                      maxWidth: "150px",
-                      maxHeight: "150px",
-                      objectFit: "cover",
+                      maxWidth: '150px',
+                      maxHeight: '150px',
+                      objectFit: 'cover',
                     }}
                     alt="preview"
                   />
                 </div>
               )}
-              <input type="file" id="upload" name="image" hidden onChange={handleChange} />
+              <input
+                type="file"
+                id="upload"
+                name="image"
+                hidden
+                onChange={handleChange}
+              />
               <label for="upload" className="label-file-add-product">
                 Upload file
               </label>
@@ -96,7 +195,7 @@ export default function UpdateProductAdmin() {
                 onChange={handleChange}
                 value={form.desc}
                 className="input-edit-category mt-4"
-                style={{ height: "130px" }}
+                style={{ height: '130px' }}
               ></textarea>
               <input
                 type="number"
@@ -116,7 +215,10 @@ export default function UpdateProductAdmin() {
               />
 
               <div className="card-form-input mt-4 px-2 py-1 pb-2">
-                <div className="text-secondary mb-1" style={{ fontSize: "15px" }}>
+                <div
+                  className="text-secondary mb-1"
+                  style={{ fontSize: '15px' }}
+                >
                   Category
                 </div>
                 {product &&
